@@ -8,6 +8,7 @@
     <link type="text/css" rel="stylesheet" media="screen" href="dist/converse.min.css" />
     <link type="text/css" rel="stylesheet" media="screen" href="css/fullpage.css" />
     <script src="dist/converse.min.js"></script>
+
 </head>
 <body class="reset">
 <div class="converse-content" style="display:none">
@@ -30,6 +31,171 @@
         }
     }
 
+    function initLogin(config)
+    {
+        if (config.hideallbrand!=="undefined"&&config.hideallbrand==true)
+        {
+            hideAllBrand();
+        }
+
+        if (config.hideregistration!=="undefined"&&config.hideregistration==true)
+        {
+            hideRegistration();
+        }
+
+        if (config.hidesubtitlebrand!=="undefined"&&config.hidesubtitlebrand==true)
+        {
+            hideSubtitleBrand();
+        }
+
+        if (config.newlogo&&config.newlogo!="")
+        {
+            changeLogo(config.newlogo);
+        }
+
+        if (config.newbrandtext&&config.newbrandtext!="")
+        {
+            changeBrandText(config.newbrandtext);
+        }
+
+        if (config.newbrandsubtext&&config.newbrandsubtext!="")
+        {
+            addSubBrandText(config.newbrandsubtext);
+        }
+
+        if (config.newbrandlink&&config.newbrandlink!="")
+        {
+            changeBrandlink(config.newbrandlink);
+        }
+
+        if (config.newtitle&&config.newtitle!="")
+        {
+            changeTitle(config.newtitle);
+        }
+    }
+
+    function addLibsignal(path)
+    {
+        var s = document.createElement("script");
+        s.type = "text/javascript";
+        s.src = path;
+        document.querySelector("head").append(s);
+    }
+
+    function hideRegistration()
+    {
+        if (document.querySelector("form#converse-login fieldset.switch-form"))
+            document.querySelector("form#converse-login fieldset.switch-form").style="display:none";
+    }
+
+    function hideAllBrand()
+    {
+        if (document.querySelector("converse-brand-heading"))
+            document.querySelector("converse-brand-heading").style="display:none";
+    }
+
+    function hideSubtitleBrand()
+    {
+        var brands = document.querySelectorAll(".brand-subtitle");
+        for (var i=0;brands&&i<brands.length;i++)
+        {
+            brands[i].style="display:none";
+        }
+    }
+
+    function changeLogo(newlogo)
+    {
+        var wrapper = document.querySelector(".brand-name-wrapper");
+        for (var i=0;wrapper&&i<wrapper.children.length;i++)
+        {
+            if (wrapper.children[i].tagName=="svg")
+            {
+                if (newlogo.startsWith("<svg"))
+                    {
+                        wrapper.insertBefore(newlogo,wrapper.children[i]);
+                    }
+                    else
+                    {
+                        var logo = document.createElement("img");
+                        logo.src=newlogo;
+                        logo.height=100;
+                        logo.width=100;
+                        wrapper.insertBefore(logo,wrapper.children[i]);
+                    }
+                wrapper.removeChild(wrapper.children[i+1]);
+            }
+        }
+    }
+
+    function changeBrandText(newtext)
+    {
+        if (document.querySelector(".brand-name"))
+            document.querySelector(".brand-name").innerText=newtext;
+    }
+
+    function addSubBrandText(newtext)
+    {
+        if (document.querySelector(".brand-name"))
+        {
+            var p = document.createElement("p");
+            p.append(newtext);
+            p.className="byline";
+            document.querySelector(".brand-name").appendChild(p);
+        }
+    }
+
+    function changeBrandlink(newlink)
+    {
+        if (document.querySelector("a.brand-heading"))
+            document.querySelector("a.brand-heading").href=newlink;
+    }
+
+    function changeTitle(newtitle)
+    {
+        if (document.querySelector("title"))
+            document.querySelector("title").innerText=newtitle;
+    }
+
+    function initObserver()
+    {
+        var targetNode = document.querySelector("div.controlbox-panes");
+
+        // Options for the observer (which mutations to observe)
+        var config =
+                    {
+                       // attributes: true,
+                        childList: true/*,
+                        subtree: true,
+                        characterData: true */
+                    };
+
+        // Callback function to execute when mutations are observed
+        var callback = function(mutationsList) {
+            for(var mutation of mutationsList) {
+                if (mutation.type == 'childList') {
+                    if (document.querySelector("converse-brand-heading"))
+                    {
+                        document.querySelector("converse-brand-heading").style="display:none";
+                        setTimeout( function ()
+                        {
+                            initLogin(window.config);
+                            document.querySelector("converse-brand-heading").style="";
+                        }
+                        , 1000 );
+                    }
+                }
+            }
+        };
+
+        // Create an observer instance linked to the callback function
+        window.observer = new MutationObserver(callback);
+
+        // Start observing the target node for configured mutations
+        observer.observe(targetNode, config);
+
+        //document.body.onunload=function(){if (window.observer)window.observer.disconnect();};
+    }
+
     function initConverse()
     {
         var request = new XMLHttpRequest();
@@ -39,16 +205,28 @@
         {
             if ( request.status >= 200 && request.status < 400 )
             {
-                var config = JSON.parse( request.responseText );
-                converse.initialize( config )
-                        .then( function ()
+                window.config = JSON.parse( request.responseText );
+
+                if (window.config.libsignal&&window.config.libsignal!="")
+                {
+                    addLibsignal(window.config.libsignal);
+                }
+
+                var interval = setInterval(function(){ //Interval because sometime converse variable was not initialized successfully
+                    if (converse) //only start real converse initialisation if variable is defined
+                    {
+                        converse.initialize( config );
+                        setTimeout( function ()
                         {
-                            setTimeout( function ()
-                            {
-                                document.querySelector('.converse-content').style = '';
-                            }
-                            , 1000 );
-                        });
+                            initLogin(window.config); //init other login styles
+                            document.querySelector('.converse-content').style = '';
+                            initObserver(); //init observer for reinit styles after logout
+                        }
+                        , 1000 );
+                        clearInterval(interval); //clear interval because we are fine now
+                        return;
+                    }
+                },500);
             }
             else
             {

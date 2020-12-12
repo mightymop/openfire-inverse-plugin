@@ -206,6 +206,16 @@ public class ConfigServlet extends HttpServlet
         addArrayOfTextConfigOption(config, "whitelisted_plugins");
         addTextConfigOption(config, "xhr_user_search_url");
 
+        addTextConfigOption(config, "newlogo");
+        addTextConfigOption(config, "newbrandtext");
+        addTextConfigOption(config, "newbrandsubtext");
+        addTextConfigOption(config, "newtitle");
+        addTextConfigOption(config, "newbrandlink");
+        addTextConfigOption(config, "libsignal");
+        addBooleanConfigOption(config, "hideallbrand");
+        addBooleanConfigOption(config, "hidesubtitlebrand");
+        addBooleanConfigOption(config, "hideregistration");
+
         // When no endpoint is configured, use this as a fallback.
         if (!config.has("bosh_service_url") || config.isNull("bosh_service_url")) {
             config.put( "bosh_service_url", defaultEndpoint );
